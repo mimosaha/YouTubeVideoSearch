@@ -1,8 +1,15 @@
 package view.edit.input.youtubeapp;
 
 import android.content.Context;
+import android.text.TextUtils;
 import android.util.Log;
 
+import com.android.volley.Request;
+import com.android.volley.RequestQueue;
+import com.android.volley.Response;
+import com.android.volley.VolleyError;
+import com.android.volley.toolbox.StringRequest;
+import com.android.volley.toolbox.Volley;
 import com.google.api.client.http.HttpRequest;
 import com.google.api.client.http.HttpRequestInitializer;
 import com.google.api.client.http.javanet.NetHttpTransport;
@@ -11,6 +18,9 @@ import com.google.api.services.youtube.YouTube;
 import com.google.api.services.youtube.model.SearchListResponse;
 import com.google.api.services.youtube.model.SearchResult;
 
+import org.json.JSONArray;
+import org.json.JSONObject;
+
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
@@ -18,12 +28,18 @@ import java.util.List;
 public class YoutubeConnector {
     private YouTube youtube;
     private YouTube.Search.List query;
+    private Context context;
 
     // Your developer key goes here
     public static final String KEY
             = "AIzaSyAOIXxJetlsLM9lk_H7vpbOx7bGMONIaXw";
 
+    public YoutubeConnector() {
+
+    }
+
     public YoutubeConnector(Context context) {
+        this.context = context;
         youtube = new YouTube.Builder(new NetHttpTransport(),
                 new JacksonFactory(), new HttpRequestInitializer() {
             @Override
@@ -35,7 +51,7 @@ public class YoutubeConnector {
             query = youtube.search().list("id,snippet");
             query.setKey(KEY);
             query.setType("video");
-            query.setFields("items(id/videoId,snippet/title,snippet/description,snippet/thumbnails/default/url)");
+            query.setFields("*");
         } catch (IOException e) {
             Log.d("YC", "Could not initialize: " + e);
         }
@@ -56,10 +72,64 @@ public class YoutubeConnector {
                 item.setId(result.getId().getVideoId());
                 items.add(item);
             }
+
+            String ids = "";
+            for (VideoItem videoItem : items) {
+                if (TextUtils.isEmpty(ids)) {
+                    ids = videoItem.getId();
+                } else {
+                    ids = ids + "," + videoItem.getId();
+                }
+            }
+            retrieveAllData(context, ids);
+
             return items;
         } catch (IOException e) {
             Log.d("YC", "Could not search: " + e);
             return null;
         }
+    }
+
+    public void setInitReq(Context context, String searchText) {
+        RequestQueue queue = Volley.newRequestQueue(context);
+
+        String url ="https://www.googleapis.com/youtube/v3/search?part=id&snippet&q="+ searchText +"&type=video&key=" + KEY;
+
+// Request a string response from the provided URL.
+        StringRequest stringRequest = new StringRequest(Request.Method.GET, url,
+                new Response.Listener<String>() {
+                    @Override
+                    public void onResponse(String response) {
+                        Log.v("MIMO_SAHA::", "Res: " + response);
+                    }
+                }, new Response.ErrorListener() {
+            @Override
+            public void onErrorResponse(VolleyError error) {
+                Log.v("MIMO_SAHA::", "Err: " + error.getMessage());
+            }
+        });
+        queue.add(stringRequest);
+    }
+
+    private void retrieveAllData(Context context, String ids) {
+
+        RequestQueue queue = Volley.newRequestQueue(context);
+
+        String url ="https://www.googleapis.com/youtube/v3/videos?id=" + ids + "&key="+ KEY + "&part=snippet,contentDetails,statistics,status";
+
+// Request a string response from the provided URL.
+        StringRequest stringRequest = new StringRequest(Request.Method.GET, url,
+                new Response.Listener<String>() {
+                    @Override
+                    public void onResponse(String response) {
+                        Log.v("MIMO_SAHA::", "Res: " + response);
+                    }
+                }, new Response.ErrorListener() {
+            @Override
+            public void onErrorResponse(VolleyError error) {
+                Log.v("MIMO_SAHA::", "Err: " + error.getMessage());
+            }
+        });
+        queue.add(stringRequest);
     }
 }

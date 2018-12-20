@@ -55,6 +55,10 @@ public class MainActivity extends AppCompatActivity {
     private void searchOnYoutube(final String keywords){
         new Thread(){
             public void run(){
+
+//                YoutubeConnector youtubeConnector = new YoutubeConnector();
+//                youtubeConnector.setInitReq(MainActivity.this, keywords);
+
                 YoutubeConnector yc = new YoutubeConnector(MainActivity.this);
                 searchResults = yc.search(keywords);
                 handler.post(new Runnable(){
