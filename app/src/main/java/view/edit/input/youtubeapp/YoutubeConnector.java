@@ -18,12 +18,13 @@ import com.google.api.services.youtube.YouTube;
 import com.google.api.services.youtube.model.SearchListResponse;
 import com.google.api.services.youtube.model.SearchResult;
 
-import org.json.JSONArray;
-import org.json.JSONObject;
-
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
+
+import retrofit2.Call;
+import retrofit2.Callback;
+import retrofit2.Retrofit;
 
 public class YoutubeConnector {
     private YouTube youtube;
@@ -81,7 +82,7 @@ public class YoutubeConnector {
                     ids = ids + "," + videoItem.getId();
                 }
             }
-            retrieveAllData(context, ids);
+            retrieveDataByRetrofit(context, ids);
 
             return items;
         } catch (IOException e) {
@@ -93,7 +94,7 @@ public class YoutubeConnector {
     public void setInitReq(Context context, String searchText) {
         RequestQueue queue = Volley.newRequestQueue(context);
 
-        String url ="https://www.googleapis.com/youtube/v3/search?part=id&snippet&q="+ searchText +"&type=video&key=" + KEY;
+        String url = "https://www.googleapis.com/youtube/v3/search?part=id&snippet&q=" + searchText + "&type=video&key=" + KEY;
 
 // Request a string response from the provided URL.
         StringRequest stringRequest = new StringRequest(Request.Method.GET, url,
@@ -115,7 +116,8 @@ public class YoutubeConnector {
 
         RequestQueue queue = Volley.newRequestQueue(context);
 
-        String url ="https://www.googleapis.com/youtube/v3/videos?id=" + ids + "&key="+ KEY + "&part=snippet,contentDetails,statistics,status";
+        String url = "https://www.googleapis.com/youtube/v3/videos?id=" + ids + "&key=" + KEY
+                + "&part=snippet,contentDetails,statistics,status";
 
 // Request a string response from the provided URL.
         StringRequest stringRequest = new StringRequest(Request.Method.GET, url,
@@ -131,5 +133,30 @@ public class YoutubeConnector {
             }
         });
         queue.add(stringRequest);
+    }
+
+    private void retrieveDataByRetrofit(Context context, String ids) {
+        Retrofit retrofit = NetworkClient.getRetrofitClient();
+        FileApis fileApis = retrofit.create(FileApis.class);
+
+        Call<PlaylistItemListResponse> call = fileApis.getVideoInfo(ids, KEY, "snippet,contentDetails,statistics,status");
+
+        call.enqueue(new Callback<PlaylistItemListResponse>() {
+            @Override
+            public void onResponse(Call<PlaylistItemListResponse> call,
+                                   retrofit2.Response<PlaylistItemListResponse> response) {
+
+                if (response.body() != null) {
+                    PlaylistItemListResponse playlistItemListResponse = response.body();
+                }
+
+                Log.v("MIMO_SAHA::", "Response: " + call + " >> " + response);
+            }
+
+            @Override
+            public void onFailure(Call<PlaylistItemListResponse> call, Throwable t) {
+                Log.v("MIMO_SAHA::", "Response: " + call + " >> " + t);
+            }
+        });
     }
 }
